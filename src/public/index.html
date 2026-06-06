@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Real‑time Chat</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    #messages { list-style: none; padding: 0; }
+    #messages li { margin: 5px 0; padding: 8px; background: #f1f1f1; border-radius: 5px; }
+    #chat { margin-top: 20px; }
+    input, button { padding: 8px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Real‑time Chat</h2>
+  <div>
+    <input type="text" id="userId" placeholder="Your User ID (e.g., 67a1b2c3...)" size="30">
+    <input type="text" id="conversationId" placeholder="Conversation ID" size="30">
+    <button id="joinBtn">Join Room</button>
+  </div>
+  <div id="history"></div>
+  <ul id="messages"></ul>
+  <div id="chat">
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <script>
+    const socket = io();  // connects to same origin
+    let currentConvId = null;
+
+    // Join conversation
+    document.getElementById('joinBtn').onclick = () => {
+      const convId = document.getElementById('conversationId').value;
+      if (!convId) return alert('Enter conversation ID');
+      currentConvId = convId;
+      socket.emit('join_conversation', convId);
+      
+      // Fetch message history via REST
+      fetch(`/api/messages/${convId}`)
+        .then(res => res.json())
+        .then(messages => {
+          const historyDiv = document.getElementById('history');
+          historyDiv.innerHTML = '<h3>Previous messages</h3>';
+          const ul = document.createElement('ul');
+          messages.forEach(msg => {
+            const li = document.createElement('li');
+            li.textContent = `${msg.senderId}: ${msg.content} (${new Date(msg.createdAt).toLocaleTimeString()})`;
+            ul.appendChild(li);
+          });
+          historyDiv.appendChild(ul);
+        });
+    };
+
+    // Listen for real‑time messages
+    socket.on('receive_message', (msg) => {
+      const messagesList = document.getElementById('messages');
+      const li = document.createElement('li');
+      li.textContent = `${msg.senderId}: ${msg.content} (just now)`;
+      messagesList.appendChild(li);
+    });
+
+    // Send message
+    document.getElementById('sendBtn').onclick = () => {
+      const senderId = document.getElementById('userId').value;
+      const content = document.getElementById('messageInput').value;
+      if (!currentConvId || !senderId || !content) return alert('Join a room and set user ID first');
+      
+      socket.emit('send_message', { conversationId: currentConvId, senderId, content });
+      document.getElementById('messageInput').value = '';
+    };
+  </script>
+</body>
+</html>
