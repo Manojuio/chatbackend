@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -23,7 +24,8 @@ app.locals.io = io;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public')); // serve client HTML
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // REST routes
 app.use('/api', conversationRoutes);
